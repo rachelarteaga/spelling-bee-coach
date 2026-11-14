@@ -25,6 +25,10 @@
   --good-soft: #e3f5ea;
   --bad: #c2372b;
   --bad-soft: #fde7e4;
+  --mixed: #a35f00;
+  --mixed-soft: #ffefd2;
+  --untested: #7a8194;
+  --untested-soft: #eceef3;
   --display: "Baloo 2", "Avenir Next Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", system-ui, sans-serif;
 }
@@ -33,6 +37,7 @@
     --bg: #12151d; --surface: #1b2030; --ink: #eef0f6; --muted: #a2a9bd; --line: #2d3447;
     --honey: #ffc629; --honey-ink: #2a1e00; --honey-soft: #3a3115;
     --good: #4fcf85; --good-soft: #17352a; --bad: #ff7b6e; --bad-soft: #3c1f1f;
+    --mixed: #ffb547; --mixed-soft: #3a2c14; --untested: #9aa1b4; --untested-soft: #252b3b;
     color-scheme: dark;
   }
 }
@@ -40,6 +45,7 @@
   --bg: #12151d; --surface: #1b2030; --ink: #eef0f6; --muted: #a2a9bd; --line: #2d3447;
   --honey: #ffc629; --honey-ink: #2a1e00; --honey-soft: #3a3115;
   --good: #4fcf85; --good-soft: #17352a; --bad: #ff7b6e; --bad-soft: #3c1f1f;
+    --mixed: #ffb547; --mixed-soft: #3a2c14; --untested: #9aa1b4; --untested-soft: #252b3b;
   color-scheme: dark;
 }
 
@@ -169,6 +175,37 @@ form { width: 100%; display: grid; gap: 12px; }
 .stat { background: var(--surface); border: 2px solid var(--line); border-radius: 14px; padding: 10px; text-align: center; }
 .stat b { display: block; font-family: var(--display); font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .stat span { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.n-good { color: var(--good); }
+.n-bad { color: var(--bad); }
+.n-streak { color: var(--honey-ink); background: var(--honey); border-radius: 10px; padding: 0 10px; }
+
+/* Word lists sheet (grown-up view) */
+.sheet {
+  position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.sheet-in { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sheet-head h2 { font-family: var(--display); font-size: 1.8rem; margin: 0; line-height: 1; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.lg { border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; border: 2px solid transparent; }
+.lg b { font-family: var(--display); font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.lg span { font-size: 0.9rem; font-weight: 700; }
+.lg small { font-size: 0.8rem; color: var(--muted); }
+.group { display: grid; gap: 8px; }
+.group h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.group h3 i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 1rem; border: 2px solid transparent; }
+.chip small { font-weight: 400; opacity: 0.85; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.s-good { background: var(--good-soft); color: var(--good); }
+.s-mixed { background: var(--mixed-soft); color: var(--mixed); }
+.s-bad { background: var(--bad-soft); color: var(--bad); }
+.s-untested { background: var(--untested-soft); color: var(--untested); }
+.dot-good { background: var(--good); } .dot-mixed { background: var(--mixed); } .dot-bad { background: var(--bad); } .dot-untested { background: var(--untested); }
+.open-lists { font: inherit; font-weight: 700; color: var(--ink); background: var(--surface); border: 2px solid var(--line); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+@media (max-width: 640px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .warn { background: var(--bad-soft); color: var(--bad); border-radius: 12px; padding: 10px 14px; font-size: 0.95rem; }
 footer { text-align: center; color: var(--muted); font-size: 0.85rem; }
@@ -198,7 +235,8 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
   .slow { padding: 12px 14px; }
   #answer { font-size: 2rem; padding: 10px 12px; }
   .key { height: 60px; max-width: 58px; }
-  .stats { display: none; }
+  .stat { padding: 4px 10px; display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+  .stat b { font-size: 1.35rem; }
 }
 </style>
 </head>
@@ -252,13 +290,14 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
   </section>
 
   <section class="stats">
-    <div class="stat"><b id="sRight">0</b><span>Right</span></div>
-    <div class="stat"><b id="sWrong">0</b><span>To practice</span></div>
-    <div class="stat"><b id="sStreak">0</b><span>Streak</span></div>
+    <div class="stat"><b id="sRight" class="n-good">0</b><span>Right</span></div>
+    <div class="stat"><b id="sWrong" class="n-bad">0</b><span>Missed</span></div>
+    <div class="stat"><b id="sStreak" class="n-streak">0</b><span>Streak</span></div>
   </section>
 
   <details class="grownups">
     <summary>Grown-up settings</summary>
+    <div class="lenrow"><button class="open-lists" id="openLists" type="button">See word lists by how he's doing</button></div>
     <div class="lenrow">
       Words per round:
       <button class="len" data-len="10" id="len-10">10</button>
@@ -276,6 +315,24 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
     </div>
     <p class="hint">Words from the 2026–2027 School Spelling Bee Study List. Progress is saved on this device only.</p>
   </details>
+
+  <div class="sheet" id="lists" hidden role="dialog" aria-label="Word lists">
+    <div class="sheet-in">
+      <div class="sheet-head">
+        <h2>Word lists</h2>
+        <button class="btn" id="closeLists" type="button">Back to practice</button>
+      </div>
+      <div class="tabs" id="listTabs">
+        <button class="len" data-tab="one" type="button">One Bee</button>
+        <button class="len" data-tab="two" type="button">Two Bee</button>
+        <button class="len" data-tab="three" type="button">Three Bee</button>
+        <button class="len" data-tab="all" type="button">All 450</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div id="groups" class="sheet-in"></div>
+      <p class="hint">Based on every first try at each word. Consistently correct: right 80% of the time or more, with at least 2 tries. Inconsistently correct: right 40–79% of the time, or right on the only try. Mostly incorrect: right less than 40% of the time. The numbers on each word are right / tries.</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1040,7 +1097,7 @@ function render() {
   $("lvl-missed").querySelector("small").textContent = `${missedN} word${missedN === 1 ? "" : "s"}`;
   $("lvl-missed").disabled = missedN === 0 && prefs.level !== "missed";
   document.querySelectorAll(".level").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.level === prefs.level)));
-  document.querySelectorAll(".len").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.len) === prefs.len)));
+  document.querySelectorAll(".len[data-len]").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.len) === prefs.len)));
 
   const done = total - queue.length - (state === "done" ? 0 : 1);
   $("levelName").textContent = LEVEL_NAMES[prefs.level];
@@ -1058,6 +1115,45 @@ function updateCountdown() {
   $("countdown").textContent =
     days > 1 ? `${days} days until the bee` : days === 1 ? "Bee is tomorrow!" : days === 0 ? "Bee day! You've got this" : "Bee day: Nov 19";
 }
+
+// ---------- Word lists (grown-up view) ----------
+const STATUS = {
+  bad:      { label: "Mostly incorrect",       note: "under 40% right" },
+  mixed:    { label: "Inconsistently correct", note: "40–79% right" },
+  good:     { label: "Consistently correct",   note: "80%+ right, 2+ tries" },
+  untested: { label: "Not tested",             note: "not tried yet" },
+};
+function wordStatus(id) {
+  const p = progress[id];
+  const tries = p ? p.right + p.wrong : 0;
+  if (!tries) return "untested";
+  const acc = p.right / tries;
+  if (tries >= 2 && acc >= 0.8) return "good";
+  if (acc < 0.4) return "bad";
+  return "mixed";
+}
+let listTab = "one";
+function renderLists() {
+  const words = listTab === "all" ? ALL : WORDS[listTab];
+  const groups = { bad: [], mixed: [], good: [], untested: [] };
+  for (const w of words) groups[wordStatus(w.id)].push(w);
+  document.querySelectorAll("#listTabs [data-tab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === listTab)));
+  $("legend").innerHTML = Object.entries(STATUS).map(([k, s]) =>
+    `<div class="lg s-${k}"><b>${groups[k].length}</b><span>${s.label}</span><small>${s.note}</small></div>`).join("");
+  $("groups").innerHTML = Object.entries(STATUS).map(([k, s]) => {
+    const list = groups[k];
+    if (!list.length) return "";
+    const chips = list.map(w => {
+      const p = progress[w.id];
+      const score = p ? `<small>${p.right}/${p.right + p.wrong}</small>` : "";
+      return `<span class="chip s-${k}">${escapeHtml(w.id)}${score}</span>`;
+    }).join("");
+    return `<section class="group"><h3><i class="dot-${k}"></i>${s.label} (${list.length})</h3><div class="chips">${chips}</div></section>`;
+  }).join("");
+}
+$("openLists").onclick = () => { listTab = prefs.level === "missed" ? "one" : prefs.level; renderLists(); $("lists").hidden = false; $("lists").scrollTop = 0; };
+$("closeLists").onclick = () => { $("lists").hidden = true; };
+document.querySelectorAll("#listTabs [data-tab]").forEach(b => b.onclick = () => { listTab = b.dataset.tab; renderLists(); });
 
 // ---------- Wire up ----------
 $("hear").onclick = () => {
@@ -1102,7 +1198,7 @@ function typeKey(k) {
 })();
 // A real keyboard still works too (handy on a Mac).
 document.addEventListener("keydown", e => {
-  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("select, summary")) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("select, summary") || !$("lists").hidden) return;
   if (/^[a-z]$/i.test(e.key)) { typeKey(e.key.toLowerCase()); e.preventDefault(); }
   else if (e.key === "Backspace") { typeKey("back"); e.preventDefault(); }
   else if (e.key === " " || e.key === "-") { typeKey(e.key); e.preventDefault(); }
