@@ -110,6 +110,7 @@ h1 .dot { color: var(--honey); }
 .steps { color: var(--muted); font-size: 1rem; margin: -6px 0 0; }
 @media (max-width: 520px) { .key { height: 48px; font-size: 1.3rem; } .kb .row { gap: 4px; } }
 
+
 .podium {
   background: var(--surface); border: 2px solid var(--line); border-radius: 22px;
   padding: 24px clamp(16px, 4vw, 32px); display: grid; gap: 18px; justify-items: center; text-align: center;
@@ -178,6 +179,27 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
   h1 { font-size: 1.6rem; }
 }
 @media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+/* In portrait the columns dissolve into one stack; in landscape they sit side by side. */
+.col { display: contents; }
+@media (orientation: landscape) and (min-width: 900px) {
+  .wrap { max-width: 1200px; padding-block: 10px 20px; gap: 10px; }
+  h1 { font-size: 1.6rem; }
+  .countdown { padding: 4px 12px; }
+  .level { padding: 6px 8px; border-radius: 12px; }
+  .level b { font-size: 1.05rem; }
+  .podium {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    column-gap: 28px; align-items: start; padding: 16px 24px;
+  }
+  .podium:has(#playRight[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .col { display: grid; gap: 12px; justify-items: center; align-content: start; width: 100%; }
+  .steps { margin: 0; }
+  .hear { font-size: 1.35rem; padding: 12px 22px; }
+  .slow { padding: 12px 14px; }
+  #answer { font-size: 2rem; padding: 10px 12px; }
+  .key { height: 60px; max-width: 58px; }
+  .stats { display: none; }
+}
 </style>
 </head>
 <body>
@@ -199,11 +221,12 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
 
 
   <section class="podium" aria-live="polite">
+   <div class="col" id="leftCol">
     <div class="progress"><span id="levelName">One Bee</span><span id="count">Word 1 of 20</span></div>
     <div class="bar"><i id="bar"></i></div>
     <p class="steps" id="steps">Tap <b>Hear word</b>, spell it with the letters, then tap <b>Check</b>.</p>
 
-    <div id="playArea" style="display:contents">
+    <div class="col" id="playLeft">
       <div class="speak-row">
         <button class="hear" id="hear" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -215,15 +238,17 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
       <div id="defBox" class="def" hidden></div>
 
       <div id="feedback" class="feedback" hidden></div>
+    </div>
+    <div id="doneArea" class="done" hidden></div>
+   </div>
 
+    <div class="col" id="playRight">
       <form id="form" autocomplete="off">
         <input id="answer" type="text" readonly inputmode="none" tabindex="-1" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="spell it here" aria-label="Your spelling">
         <div class="kb" id="kb" aria-label="Letter keyboard"></div>
       </form>
       <button class="skiplink" id="skip" type="button">Skip this word</button>
     </div>
-
-    <div id="doneArea" class="done" hidden></div>
   </section>
 
   <section class="stats">
@@ -819,7 +844,8 @@ function loadVoices() {
     voice = voiceChoices.find(v => v.voiceURI === prefs.voice) || voice || voiceChoices[0] || null;
     $("voice").innerHTML = voiceChoices.map((v, i) =>
       `<option value="${i}">${escapeHtml(`${v.name} · ${v.lang}${/premium/i.test(v.voiceURI) ? " · premium" : /enhanced/i.test(v.voiceURI) ? " · enhanced" : ""}`)}</option>`).join("");
-    if (voice) $("voice").value = String(voiceChoices.indexOf(voice));
+    $("voice").insertAdjacentHTML("afterbegin", REC_OPTION);
+    $("voice").value = prefs.useRec === false && voice ? String(voiceChoices.indexOf(voice)) : "rec";
     return;
   }
   const all = every.filter(v => /^en/i.test(v.lang) && !SKIP_VOICES.test(v.name));
@@ -836,9 +862,11 @@ function loadVoices() {
   sel.innerHTML = voiceChoices.length
     ? voiceChoices.map((v, i) => `<option value="${i}">${escapeHtml(voiceLabel(v))}</option>`).join("")
     : `<option>Default voice</option>`;
+  sel.insertAdjacentHTML("afterbegin", REC_OPTION);
   sel.insertAdjacentHTML("beforeend", `<option value="all">Show all voices (${every.length})…</option>`);
-  if (voice) sel.value = String(voiceChoices.indexOf(voice));
+  sel.value = prefs.useRec === false && voice ? String(voiceChoices.indexOf(voice)) : "rec";
 }
+const REC_OPTION = `<option value="rec">Emma: clear recorded voice ★</option>`;
 function say(text, rate = 0.85) {
   if (!canSpeak) return;
   speechSynthesis.cancel();
@@ -850,6 +878,21 @@ function say(text, rate = 0.85) {
   u.rate = rate;
   speechSynthesis.speak(u);
 }
+
+// ---------- Recorded audio (clear natural voice), with the device voice as a backup ----------
+// One reused <audio> element: once a tap has played it, iPad lets later plays start on their own.
+const player = new Audio();
+player.preload = "auto";
+const slugOf = id => id.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/ /g, "_");
+function speak(kind, name, text, rate) {
+  if (prefs.useRec === false) return say(text, rate);
+  if (canSpeak) speechSynthesis.cancel();
+  player.pause();
+  player.onerror = () => say(text, rate);   // file missing (e.g. no audio folder): fall back
+  player.src = `audio/${kind}/${name}.mp3`;
+  player.play().catch(err => { if (err.name !== "AbortError") say(text, rate); });
+}
+const PRAISES = ["Correct!", "Nailed it!", "Yes!", "Perfect!", "Great spelling!"];
 
 // ---------- Round state ----------
 let queue = [];       // words still to ask this round
@@ -886,10 +929,11 @@ function nextWord() {
   if (!queue.length) return finishRound();
   current = queue.shift();
   state = "asking";
-  $("playArea").style.display = "contents";
+  $("playLeft").hidden = false;
+  $("playRight").hidden = false;
   $("doneArea").hidden = true;
   render();
-  if (started) { say(current.id); }
+  if (started) { speak("word", slugOf(current.id), current.id); }
 }
 
 function letterTiles(correct, typed) {
@@ -932,7 +976,8 @@ function onSubmit(e) {
   if (checkAnswer(typed, current)) {
     record(current.id, true);
     round.right++; round.streak++;
-    const praise = ["Correct!", "Nailed it!", "Yes!", "Perfect!", "Great spelling!"][Math.floor(Math.random() * 5)];
+    const pi = Math.floor(Math.random() * PRAISES.length);
+    const praise = PRAISES[pi];
     fb.className = "feedback good";
     fb.innerHTML = `<h2>${praise}</h2>
       <div class="tiles">${letterTiles(current.spellings[0], "")}</div>`;
@@ -940,7 +985,7 @@ function onSubmit(e) {
     $("defBox").hidden = true;
     state = "ready";
     render();
-    say(praise, 1);
+    speak("say", "praise" + pi, praise, 1);
     setTimeout(nextWord, 1600);
   } else {
     record(current.id, false);
@@ -960,14 +1005,15 @@ function onSubmit(e) {
     $("answer").value = "";
     $("check").textContent = "Next";
     render();
-    say(`Not quite. ${current.spellings[0]} is spelled: ${spellOut(current.spellings[0])}.`, 0.8);
+    speak("spell", slugOf(current.id), `Not quite. ${current.spellings[0]} is spelled: ${spellOut(current.spellings[0])}.`, 0.8);
   }
 }
 
 function finishRound() {
   state = "done";
   current = null;
-  $("playArea").style.display = "none";
+  $("playLeft").hidden = true;
+  $("playRight").hidden = true;
   const missed = [...round.missed];
   const d = $("doneArea");
   d.innerHTML = `<h2>Round done!</h2>
@@ -1017,7 +1063,7 @@ function updateCountdown() {
 $("hear").onclick = () => {
   if (!current) return;
   started = true;
-  say(current.id);
+  speak("word", slugOf(current.id), current.id);
 };
 $("define").onclick = () => {
   if (!current) return;
@@ -1025,7 +1071,7 @@ $("define").onclick = () => {
   const def = DEFS[current.id] || "Sorry, there's no definition for this word yet.";
   $("defBox").innerHTML = `<b>It means:</b> ${escapeHtml(def)}`;
   $("defBox").hidden = false;
-  say(`${current.id}. It means: ${def}`);
+  speak("def", slugOf(current.id), `${current.id}. It means: ${def}`);
 };
 
 // ---------- On-screen letter keyboard (so the iPad keyboard never pops up) ----------
@@ -1062,7 +1108,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === " " || e.key === "-") { typeKey(e.key); e.preventDefault(); }
   else if (e.key === "Enter") { $("form").requestSubmit(); e.preventDefault(); }
 });
-$("slow").onclick = () => { if (current) { started = true; say(current.id, 0.5); } };
+$("slow").onclick = () => { if (current) { started = true; speak("slow", slugOf(current.id), current.id, 0.5); } };
 $("skip").onclick = () => {
   if (!current) return;
   if (state === "asking") { queue.push(current); }
@@ -1077,11 +1123,16 @@ $("resetYes").onclick = () => { progress = {}; save(); $("resetConfirm").hidden 
 
 $("voice").onchange = e => {
   if (e.target.value === "all") { showAllVoices = true; loadVoices(); return; }
-  voice = voiceChoices[Number(e.target.value)] || voice;
-  if (voice) { prefs.voice = voice.voiceURI; save(); }
-  say("Let's practice for the spelling bee.");
+  if (e.target.value === "rec") { prefs.useRec = true; }
+  else {
+    prefs.useRec = false;
+    voice = voiceChoices[Number(e.target.value)] || voice;
+    if (voice) prefs.voice = voice.voiceURI;
+  }
+  save();
+  speak("say", "try", "Let's practice for the spelling bee.");
 };
-$("tryVoice").onclick = () => say("Let's practice for the spelling bee.");
+$("tryVoice").onclick = () => speak("say", "try", "Let's practice for the spelling bee.");
 
 if (canSpeak) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 if (!canSpeak) $("speechWarn").hidden = false;
