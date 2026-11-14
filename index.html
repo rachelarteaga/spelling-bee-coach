@@ -347,8 +347,10 @@ function say(text, rate = 0.85) {
   if (!canSpeak) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  if (voice) u.voice = voice;
-  u.lang = "en-US";
+  // Safari on iPad can ignore u.voice when u.lang names a different default voice,
+  // so the language always comes from the chosen voice.
+  if (voice) { u.voice = voice; u.lang = voice.lang; }
+  else u.lang = "en-US";
   u.rate = rate;
   speechSynthesis.speak(u);
 }
