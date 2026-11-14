@@ -80,7 +80,35 @@ h1 .dot { color: var(--honey); }
   font: inherit; color: var(--ink); background: var(--surface); border: 2px solid var(--line);
   border-radius: 999px; padding: 4px 12px; max-width: 100%; min-width: 0;
 }
-.lenrow .sep { flex-basis: 100%; height: 0; }
+.grownups { border-top: 2px solid var(--line); padding-top: 12px; display: grid; gap: 12px; color: var(--muted); }
+.grownups summary { cursor: pointer; font-weight: 700; }
+.grownups[open] { gap: 12px; }
+.grownups .lenrow { margin-top: 10px; }
+
+.def {
+  width: 100%; background: var(--honey-soft); color: var(--ink); border-radius: 14px;
+  padding: 12px 16px; font-size: 1.15rem; text-align: left;
+}
+.def b { font-family: var(--display); }
+
+.kb { display: grid; gap: 8px; width: 100%; margin-top: 4px; user-select: none; -webkit-user-select: none; }
+.kb .row { display: flex; gap: 6px; justify-content: center; }
+.key {
+  flex: 1 1 0; max-width: 64px; min-width: 0; height: 58px;
+  font-family: var(--body); font-weight: 700; font-size: 1.6rem; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--line); border-bottom-width: 4px; border-radius: 12px;
+  cursor: pointer; touch-action: manipulation; padding: 0;
+}
+.key:active { transform: translateY(2px); border-bottom-width: 2px; background: var(--honey-soft); }
+.key.wide { max-width: 110px; flex-grow: 1.6; font-size: 1.1rem; }
+.key.space { max-width: 220px; flex-grow: 3; font-size: 1rem; color: var(--muted); }
+.key.go {
+  max-width: 200px; flex-grow: 2.5; font-family: var(--display); font-size: 1.4rem;
+  background: var(--good); border-color: var(--good); color: #fff;
+}
+.skiplink { font: inherit; font-size: 0.95rem; background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.steps { color: var(--muted); font-size: 1rem; margin: -6px 0 0; }
+@media (max-width: 520px) { .key { height: 48px; font-size: 1.3rem; } .kb .row { gap: 4px; } }
 
 .podium {
   background: var(--surface); border: 2px solid var(--line); border-radius: 22px;
@@ -169,20 +197,11 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
     <button class="level" data-level="missed" id="lvl-missed"><b>Missed</b><small></small></button>
   </nav>
 
-  <div class="lenrow">
-    Words per round:
-    <button class="len" data-len="10" id="len-10">10</button>
-    <button class="len" data-len="20" id="len-20">20</button>
-    <button class="len" data-len="0" id="len-all">All</button>
-    <span class="sep"></span>
-    <label for="voice">Voice:</label>
-    <select id="voice"><option>Loading voices…</option></select>
-    <button class="len" id="tryVoice" type="button">Try it</button>
-  </div>
 
   <section class="podium" aria-live="polite">
     <div class="progress"><span id="levelName">One Bee</span><span id="count">Word 1 of 20</span></div>
     <div class="bar"><i id="bar"></i></div>
+    <p class="steps" id="steps">Tap <b>Hear word</b>, spell it with the letters, then tap <b>Check</b>.</p>
 
     <div id="playArea" style="display:contents">
       <div class="speak-row">
@@ -191,17 +210,17 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
           <span id="hearLabel">Hear word</span>
         </button>
         <button class="slow" id="slow" type="button">Say it slowly</button>
+        <button class="slow" id="define" type="button">What does it mean?</button>
       </div>
-
-      <form id="form" autocomplete="off">
-        <input id="answer" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="type the word" aria-label="Type the spelling">
-        <div class="actions">
-          <button class="btn" id="check" type="submit">Check</button>
-          <button class="btn ghost" id="skip" type="button">Skip</button>
-        </div>
-      </form>
+      <div id="defBox" class="def" hidden></div>
 
       <div id="feedback" class="feedback" hidden></div>
+
+      <form id="form" autocomplete="off">
+        <input id="answer" type="text" readonly inputmode="none" tabindex="-1" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" placeholder="spell it here" aria-label="Your spelling">
+        <div class="kb" id="kb" aria-label="Letter keyboard"></div>
+      </form>
+      <button class="skiplink" id="skip" type="button">Skip this word</button>
     </div>
 
     <div id="doneArea" class="done" hidden></div>
@@ -213,7 +232,25 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
     <div class="stat"><b id="sStreak">0</b><span>Streak</span></div>
   </section>
 
-  <footer>Words from the 2026–2027 School Spelling Bee Study List. <button id="reset" type="button">Reset progress</button><span id="resetConfirm" hidden> Sure? <button id="resetYes" type="button">Yes, erase</button> <button id="resetNo" type="button">Cancel</button></span></footer>
+  <details class="grownups">
+    <summary>Grown-up settings</summary>
+    <div class="lenrow">
+      Words per round:
+      <button class="len" data-len="10" id="len-10">10</button>
+      <button class="len" data-len="20" id="len-20">20</button>
+      <button class="len" data-len="0" id="len-all">All</button>
+    </div>
+    <div class="lenrow">
+      <label for="voice">Voice:</label>
+      <select id="voice"><option>Loading voices…</option></select>
+      <button class="len" id="tryVoice" type="button">Try it</button>
+    </div>
+    <div class="lenrow">
+      <button class="len" id="reset" type="button">Reset progress</button>
+      <span id="resetConfirm" hidden>Erase all saved progress? <button class="len" id="resetYes" type="button">Yes, erase</button> <button class="len" id="resetNo" type="button">Cancel</button></span>
+    </div>
+    <p class="hint">Words from the 2026–2027 School Spelling Bee Study List. Progress is saved on this device only.</p>
+  </details>
 </div>
 
 <script>
@@ -246,6 +283,465 @@ phenomenon alleviate legation diffidence butane cataract quiche euphemism acolyt
 };
 const LEVEL_NAMES = { one: "One Bee", two: "Two Bee", three: "Three Bee", missed: "Missed words" };
 
+// ---------- Kid-friendly definitions (never contain the word itself) ----------
+const DEFS_TEXT = `
+ran = moved quickly on your feet. It already happened.
+rod = a long, thin, straight stick, like the one used for fishing.
+shy = feeling nervous or quiet around people you don't know.
+drink = to swallow water, milk, or juice.
+mist = a very light fog made of tiny drops of water in the air.
+still = not moving at all.
+pump = a machine that pushes air or water, like the one that fills bike tires.
+sharp = having an edge or point that can cut, like a knife.
+rich = having lots of money.
+shoot = to send something flying fast, like a basketball toward the hoop.
+claws = the sharp, curved nails on an animal's feet, like a cat's.
+winter = the coldest season of the year, when it might snow.
+yellow = the color of a banana or the sun.
+mouth = the part of your face you use to eat and talk.
+paper = thin sheets you write or draw on.
+inside = in the inner part of something, not outdoors.
+whale = a giant animal that lives in the ocean and breathes air.
+lizard = a small reptile with scaly skin, four legs, and a long tail.
+nurse = a person who takes care of sick people, often in a hospital.
+wind = air moving outside, strong enough to blow leaves around.
+good = nice, right, or well done.
+bunny = a cute name for a rabbit.
+silly = goofy and funny, not serious.
+stars = the tiny shining lights you see in the night sky.
+hello = what you say when you greet someone.
+shell = the hard outside cover of a turtle, snail, or egg.
+easy = not hard to do.
+shift = to move or change position a little.
+seal = a sea animal with flippers that barks and swims well.
+crack = a thin break in something, like a line in a sidewalk.
+apple = a round red or green fruit that grows on trees.
+shine = to give off bright light, like the sun.
+spray = tiny drops of liquid shooting through the air, like from a hose.
+rabbit = a small furry animal with long ears that hops.
+frozen = turned into ice because it got so cold.
+market = a place where people buy and sell food and other things.
+beware = be careful! Watch out for danger.
+wrong = not right or not correct.
+leg = the part of your body you stand and walk on.
+most = the biggest amount, more than all the others.
+down = toward the ground. The opposite of up.
+sick = not feeling well, like when you have a cold.
+truck = a big vehicle used to carry heavy things.
+bush = a plant like a small, short tree with lots of branches.
+yarn = thick, soft thread used for knitting.
+body = all of you, from your head to your toes.
+heart = the part inside your chest that pumps blood. It's also a symbol for love.
+even = flat and smooth. Or a number like 2, 4, or 6.
+come = to move closer to where someone is.
+sound = anything you can hear.
+chips = thin, crunchy slices of potato you eat as a snack.
+year = 365 days, the time it takes Earth to go around the sun.
+feed = to give food to a person or animal.
+speak = to say words out loud; to talk.
+flock = a group of birds or sheep together.
+sparkle = to shine with lots of little flashes of light, like glitter.
+hopped = jumped like a frog or a bunny. It already happened.
+dirt = loose soil or mud on the ground.
+hurt = to cause pain, or to be in pain.
+steps = the movements of your feet when you walk. Also stairs.
+path = a narrow trail for walking.
+fire = the hot flames and light made when something burns.
+late = after the time you were supposed to be there.
+wings = the parts birds and airplanes use to fly.
+house = a building where a family lives.
+tusk = a long, pointed tooth that sticks out, like an elephant's.
+dive = to jump into water headfirst.
+fine = okay or good.
+mossy = covered in a soft, green plant that grows on rocks and trees.
+beans = seeds you can eat that grow in pods.
+truth = what is real and actually happened. Not a lie.
+tallest = higher than all the others.
+cliffs = very steep, high walls of rock, often by the ocean.
+crunch = the loud, crackly sound of biting something crispy.
+sweater = a warm knitted top with long sleeves.
+money = coins and paper bills you use to buy things.
+cabin = a small, simple house, often made of logs in the woods.
+carve = to cut a shape out of wood or a pumpkin.
+earth = the planet we live on. Also another word for soil.
+half = one of two equal parts.
+fear = the feeling of being scared.
+riddle = a tricky question or puzzle that is fun to guess.
+illness = a sickness.
+knit = to make clothes from yarn using two long needles.
+total = the whole amount when you add everything up.
+finish = to come to the end of something; to complete it.
+spiders = small animals with eight legs that spin webs.
+hospital = a building where doctors and nurses care for sick or hurt people.
+narrow = thin; not wide.
+foolish = silly in a way that's not smart.
+charming = very pleasant and likable.
+beasts = big, wild animals, like in a fairy tale.
+smoothly = moving easily without bumps or problems.
+dangle = to hang down loosely and swing.
+frazzled = tired, stressed, and messy, like after a very busy day.
+darkness = when there is no light at all.
+shadows = dark shapes made when something blocks the light.
+friend = someone you like who likes you back.
+swift = very fast.
+thirsty = needing something to drink.
+voice = the sound you make when you talk or sing.
+lead = to go first and show others the way.
+cloak = a loose cape that goes over your shoulders, like a wizard wears.
+indoors = inside a building.
+holiday = a special day for celebrating, often with no school.
+entire = the whole thing; all of it.
+mustard = a yellow, tangy sauce you put on hot dogs.
+medium = in the middle. Not small and not large.
+afraid = scared.
+source = where something comes from.
+shivering = shaking because you are cold or scared.
+cottage = a small, cozy house, often in the country.
+distance = how far apart two things are.
+bamboo = a tall, fast-growing plant with hollow stems that pandas eat.
+always = every time; forever.
+morning = the early part of the day, before lunch.
+lovely = beautiful and very nice.
+grandfather = your mom's or dad's father.
+peer = to look closely at something that is hard to see.
+peach = a sweet, juicy fruit with fuzzy skin and a big pit.
+groan = a long, low sound you make when you're unhappy or in pain.
+parade = people marching down the street to celebrate, with music and floats.
+trouble = a problem, or something that causes worry.
+safety = being protected from danger or getting hurt.
+library = a place with lots of books you can borrow.
+company = a business. Or people who come to visit you.
+pennies = coins that are each worth one cent.
+remember = to keep something in your mind and not forget it.
+pearls = smooth, shiny white balls found inside oysters, used in jewelry.
+barge = a long, flat boat that carries heavy things on rivers.
+humble = not bragging; not thinking you're better than others.
+breeze = a gentle, light wind.
+sprout = a baby plant that has just started growing from a seed.
+alive = living; not dead.
+return = to come back, or to give something back.
+footprints = marks your feet leave in sand, mud, or snow.
+gentle = soft and kind; not rough.
+pancakes = flat, round breakfast food cooked on a hot griddle and topped with syrup.
+sloth = a very slow animal that hangs upside down in rainforest trees.
+whistle = a high sound you make by blowing through your lips.
+relax = to rest and calm down.
+stout = short and thick or sturdy.
+guide = a person who shows you the way.
+ginger = a spicy root used in cooking and in some cookies.
+hiking = taking a long walk on trails, often in nature.
+result = what happens because of something else; the outcome.
+tangy = having a sharp, sour taste, like lemonade.
+grumpily = in a cranky, bad-tempered way.
+seventy = the number 70.
+soared = flew high up in the sky.
+buttons = small round things that hold clothes closed. Also things you press on a machine.
+clever = smart and quick at figuring things out.
+invite = to ask someone to come to something, like a party.
+carefully = paying close attention so you don't make a mistake.
+permit = to allow. Or a paper that says you are allowed to do something.
+lunar = having to do with the moon.
+woven = made by crossing threads or strips over and under each other, like a basket.
+granola = a crunchy breakfast food made of oats, nuts, and honey.
+laughter = the happy sound people make when something is funny.
+lounge = to relax lazily. Or a room with comfy chairs.
+duration = how long something lasts.
+examine = to look at something very closely.
+tissues = soft paper you use to blow your nose.
+compromise = when two people each give up a little so they can agree.
+bifocals = glasses with two parts: one for seeing far away and one for reading.
+geologist = a scientist who studies rocks and the Earth.
+atmosphere = the layer of air that surrounds the Earth.
+helium = a light gas that makes balloons float.
+annoyance = the feeling of being bothered or irritated.
+cuddle = to hug someone close in a warm, loving way.
+basement = the floor of a house that is under the ground.
+butterflies = insects with large, colorful wings.
+sniffling = breathing in through your nose again and again, like when you have a cold or are crying.
+awning = a cloth or metal cover that sticks out over a window or door for shade.
+boycotting = refusing to buy or use something as a protest.
+proclaim = to announce something loudly and proudly.
+warrior = a brave fighter or soldier.
+salary = the money a person is paid for their job.
+jovial = cheerful and friendly.
+dictionary = a book that lists words and tells what they mean.
+versus = against, like one team against another.
+marlin = a large ocean fish with a long, pointed nose like a spear.
+incident = something that happens, often something unusual or bad.
+cutlery = forks, knives, and spoons.
+bellowed = shouted in a very loud, deep voice.
+disappointment = the sad feeling when something doesn't turn out the way you hoped.
+suggested = gave an idea for someone to think about.
+interruption = when something stops what is happening, like talking while someone else is talking.
+puffy = swollen, or soft and fluffy like a big winter coat.
+burlap = rough, scratchy cloth used to make sacks.
+kelp = a large, brown seaweed that grows in tall underwater forests.
+beneath = under or below.
+fickle = changing your mind a lot.
+molten = melted by great heat, like lava from a volcano.
+thimble = a tiny cap you wear on your finger to protect it when sewing.
+rigid = stiff and hard to bend.
+disappear = to go out of sight; to vanish.
+inferior = not as good as something else.
+business = a company that sells things or services to make money.
+lullaby = a soft, quiet song sung to help a baby fall asleep.
+Halloween = the holiday on October 31 when kids dress in costumes and go trick-or-treating.
+Japanese = from the island country whose capital is Tokyo, or the language spoken there.
+chisel = a tool with a sharp, flat edge used to carve wood or stone.
+organism = any living thing, like a plant, an animal, or a germ.
+truant = a student who skips school without permission.
+chimpanzees = smart apes from Africa that are close relatives of humans.
+concentrate = to focus all your attention on one thing.
+tiptoed = walked very quietly on the front of your feet so no one would hear.
+wetlands = land that is soggy and full of water, like a swamp or marsh.
+property = things that belong to someone, or land that someone owns.
+tractor = a strong farm vehicle with big wheels used to pull heavy things.
+relief = the good feeling when something worrying or painful stops.
+elite = the very best of a group.
+custody = being in charge of taking care of someone or something.
+fierce = wild, strong, and scary.
+hurdler = an athlete who races and jumps over barriers on a track.
+December = the last month of the year.
+reinstate = to put someone or something back where it was before.
+opposite = completely different, like hot and cold.
+compliment = something nice you say about someone.
+investment = money you put into something hoping to get more back later.
+fundraiser = an event to collect money for a good cause.
+quail = a small, round, brown bird.
+pamphlet = a small, thin booklet with information.
+desperate = feeling like you badly need something and will try anything.
+piñata = a decorated container filled with candy that you hit with a stick at parties.
+territory = an area of land that belongs to someone, or that an animal guards.
+monorail = a train that runs on a single track.
+alphabetical = in the order of the letters A, B, C, and so on.
+prejudice = an unfair opinion about someone before you know them, often because of how they look or where they're from.
+cartridge = a small container that fits into a machine, like ink for a printer.
+fertilizer = plant food you put in soil to help plants grow.
+sorceress = a woman who uses magic; a female wizard.
+singularity = something completely one of a kind. Also the center of a black hole.
+battalion = a large group of soldiers.
+perimeter = the distance around the outside edge of a shape.
+meticulous = very careful about every little detail.
+megahertz = a unit for measuring very fast signals, like radio waves.
+insurrection = when a group of people rise up and fight against their government.
+fascism = a type of government where one powerful leader has total control and people lose their freedoms.
+reservoir = a big lake made to store water for a town or city.
+carrion = the meat of dead animals, which vultures eat.
+elliptical = shaped like an oval, or a stretched-out circle.
+cemetery = a place where people who have died are buried.
+stragglers = people or animals that fall behind the rest of the group.
+exploratory = done to find out about something new.
+integrity = being honest and doing the right thing, even when no one is watching.
+solidarity = standing together and supporting each other as a group.
+segregation = keeping groups of people apart, like the unfair laws that once separated people by skin color.
+apprentice = someone who learns a job by working with an expert.
+glamorous = fancy, exciting, and beautiful, like a movie star.
+fictitious = made up; not real.
+collateral = something valuable you promise to give up if you can't pay back a loan.
+precedent = an earlier example that people use as a guide for what to do later.
+haddock = a fish from the North Atlantic Ocean that people eat.
+cosmodrome = a place where rockets are launched into space, especially in Russia.
+regolith = the loose layer of dust and broken rock that covers the Moon.
+pheasants = large birds with long tails. The males have bright, colorful feathers.
+duende = a magical feeling in music or dance that deeply moves people. Also a goblin in Spanish folk tales.
+matrilineal = traced through the mother's side of the family.
+glaucoma = an eye disease that can slowly damage your eyesight.
+staccato = music played with short, separate, bouncy notes.
+dachshund = a small dog with a long body and very short legs, sometimes called a wiener dog.
+albino = a person or animal born with very little color in their skin, hair, and eyes.
+indigo = a deep blue-purple color.
+Oregon = a state in the northwest United States, on the Pacific Ocean.
+calico = a cat with patches of white, orange, and black fur. Also a printed cotton cloth.
+tortillas = thin, flat, round breads made from corn or flour, used for tacos.
+synthetic = made by people in a factory, not found in nature.
+salamanders = small animals with smooth, damp skin and tails. They look like lizards but are amphibians.
+convertible = a car with a roof that can fold down.
+initiation = a ceremony to welcome someone as a new member of a group.
+materialize = to suddenly appear.
+hypothermia = a dangerous condition when your body gets much too cold.
+arthritis = a sickness that makes joints, like knees and fingers, stiff and sore.
+pentathletes = athletes who compete in a contest with five different events.
+predecessor = the person who had a job before someone else.
+conscious = awake and aware of what is around you.
+piteously = in a sad way that makes you feel sorry for someone.
+iridium = a very hard, shiny, silver-white metal.
+rendezvous = a planned meeting at a certain time and place. It's a French word.
+ridiculous = so silly it's almost unbelievable.
+bratwurst = a kind of German sausage.
+rebuttal = an answer that argues against what someone else said.
+sputnik = the first satellite ever launched into space, by Russia in 1957.
+civilian = a person who is not in the army or military.
+Caesar = the name of a famous ruler of ancient Rome. It became a title for Roman emperors.
+suspension = the springs in a car that make the ride smooth. Or being kept out of school for a while.
+snarkiness = being sarcastic and rude in a snippy way.
+mascara = makeup brushed onto eyelashes to make them look darker and longer.
+magnesium = a light, silvery metal that burns with a very bright white light.
+optometrist = an eye doctor who checks your eyes and gives you glasses.
+schnauzer = a dog from Germany with a beard and bushy eyebrows.
+persnickety = very fussy about small details.
+Senegal = a country on the west coast of Africa.
+Polaroid = a camera that prints the photo right away.
+arnica = a yellow flower used to make a cream for bruises and sore muscles.
+adrenaline = a chemical your body makes when you're scared or excited. It makes your heart beat faster.
+romerillo = a plant with small white flowers that grows in Cuba and other warm places. It's a Spanish word.
+Aeolus = the keeper of the winds in Greek myths.
+newt = a small amphibian that lives near water and has a long tail.
+generosity = being happy to give and share with others.
+wallowing = rolling around in mud or water, like a pig does.
+mewling = crying softly and weakly, like a kitten.
+panoramic = showing a wide view of everything around you.
+gauntlets = thick gloves that cover your wrists, like knights wore.
+appetizing = looking or smelling delicious.
+prospective = likely to happen or become something in the future.
+preconception = an idea you have about something before you really know about it.
+hemisphere = half of the Earth, like the northern half or the southern half.
+reluctance = not wanting to do something.
+propeller = spinning blades that move a boat or an airplane.
+settee = a small sofa for two or three people.
+finesse = great skill and gracefulness.
+curriculum = all the subjects and lessons taught at a school.
+enigmatic = mysterious and hard to understand.
+hypothesis = a smart guess that a scientist tests with an experiment.
+thrummed = made a steady humming or strumming sound.
+burnished = polished until shiny.
+imperial = having to do with an empire or an emperor.
+generator = a machine that makes electricity.
+Doberman = a large, sleek dog with short black-and-tan fur, often a guard dog.
+inanimate = not alive, like a rock or a chair.
+sentinels = guards who stand watch.
+subscription = paying to get something regularly, like a magazine.
+procession = a line of people or cars moving along slowly, like at a ceremony.
+seminal = very important, leading to lots of new ideas.
+consulate = an office in a foreign city that helps people from its home country.
+modish = stylish and in fashion.
+unconscious = not awake and not aware, like after fainting.
+foliage = the leaves of plants and trees.
+quizzically = in a puzzled, questioning way.
+increments = small steps or amounts that something grows by.
+reassurance = words or actions that help someone feel less worried.
+censers = containers that burn sweet-smelling incense, often in churches.
+embankment = a raised wall of earth or stone, like along a river or railroad.
+mortar = a cement-like paste that holds bricks together.
+persistent = keeps going and doesn't give up.
+dominion = the power to rule, or the land that someone rules.
+lemmings = small, furry rodents that live in the far north.
+frequency = how often something happens.
+blithely = in a cheerful, carefree way.
+tenuous = very thin or weak, like a connection that could easily break.
+saxophone = a curved brass instrument played in jazz bands.
+canter = a horse's smooth run, faster than a trot but slower than a gallop.
+cuisine = a style of cooking, like Italian or Mexican food.
+influenza = a sickness that spreads in winter and causes fever, chills, and aches.
+odorant = something that gives off a smell.
+crocheted = made by looping yarn with a hooked needle.
+apologetic = showing that you are sorry.
+lapels = the folded-back parts on the front of a jacket, below the collar.
+unrelenting = never stopping or easing up.
+arsonists = people who set fires on purpose to damage things, which is a crime.
+authority = the power to make rules or decisions.
+decisively = in a quick, sure way, without hesitating.
+auditory = having to do with hearing.
+self-sufficient = able to take care of yourself without help.
+conspicuous = easy to notice; standing out.
+perpendicular = meeting at a perfect square corner, like the letter L.
+torrential = falling in huge amounts, like very heavy rain.
+sauntered = walked in a slow, relaxed way.
+juniper = an evergreen bush with small, blue, berry-like cones.
+palazzo = a large, fancy building or palace in Italy.
+irrelevant = not related to what you are talking about.
+diplomatically = in a polite, careful way that avoids upsetting people.
+calibrate = to adjust a tool or machine so it measures correctly.
+credenza = a long, low cabinet for storing things, often in a dining room or office.
+comprehensible = able to be understood.
+trenchant = sharp and clear, like a strong argument.
+despondent = very sad and without hope.
+echolocation = how bats and dolphins find things: they make sounds and listen for them to bounce back.
+conflagration = a huge, destructive fire.
+thermotaxis = when a living thing moves toward or away from heat.
+inaugurate = to start something officially with a ceremony, like swearing in a new president.
+bioluminescence = light made by living things, like fireflies and some deep-sea fish.
+chickadee = a small, friendly songbird with a black cap.
+asymmetric = not the same on both sides.
+sharpei = a Chinese dog breed with lots of wrinkly skin.
+endothermy = making your own body heat, like mammals and birds do.
+éclair = a long pastry filled with cream and topped with chocolate.
+irascibility = getting angry very easily.
+a cappella = singing without any musical instruments.
+Amharic = the main language spoken in Ethiopia.
+Gloucester = a city in England, and also a city in Massachusetts.
+prosciutto = thin slices of salty Italian ham.
+chitinous = made of the hard material that forms insect shells.
+Krio = a language spoken in Sierra Leone, in West Africa.
+Addis Ababa = the capital city of Ethiopia.
+protectorate = a small country that a stronger country guards and partly controls.
+pulmonary = having to do with the lungs.
+approximation = a close guess, but not exact.
+glycerin = a clear, sweet, syrupy liquid used in soap and lotion.
+alabaster = a smooth, white stone used for carving statues.
+arugula = a leafy green with a peppery taste, used in salads.
+vibrometer = a tool that measures how much something shakes.
+mayonnaise = a creamy white spread made from eggs and oil, used on sandwiches.
+sputum = the thick spit you cough up when you're sick.
+cerulean = a bright, sky-blue color.
+cul-de-sac = a dead-end street with a round circle at the end.
+electrolytes = minerals like salt that help your muscles work. They're in sports drinks.
+ototoxic = harmful to the ears or hearing.
+Aphrodite = the Greek goddess of love and beauty.
+bogong moth = a brown moth in Australia that travels long distances every year.
+yakuza = a group of criminals in Japan.
+sensilla = tiny hairs or bumps that insects use to sense things.
+eponymous = named after a person, like a store named for its owner.
+Presbyterian = a member of one kind of Christian church.
+lactobacillus = helpful bacteria found in yogurt.
+spes phthisica = an old medical term from Latin for the hopeful, cheerful feeling some very sick patients had.
+Delaware = a small state on the East Coast. It was the first state to join the United States.
+undulating = moving in smooth waves, up and down.
+phantasmal = like a ghost; dreamlike or not real.
+brazier = a metal container that holds burning coals to give heat.
+arachnid = the group of animals with eight legs, like spiders and scorpions.
+pathologically = in an extreme way that can't be controlled, like it's caused by a sickness.
+affinities = natural likings for, or connections to, something.
+embodiment = a perfect real-life example of an idea.
+porpoises = small sea mammals related to dolphins.
+psychological = having to do with the mind and feelings.
+assemblage = a collection of things or people gathered together.
+leprosy = a long-lasting disease that affects the skin and nerves. Today it can be cured.
+eureka = what you shout when you suddenly discover something! It means "I found it!"
+annelids = worms whose bodies are made of rings, like earthworms.
+kerosene = an oil burned in lamps and heaters and used as jet fuel.
+Pennsylvania = a state in the northeastern United States where the Liberty Bell is.
+ampulla = a small round bottle, or a bulge in a tube inside the body.
+solenodon = a rare, small animal from the Caribbean with a long snout and a venomous bite.
+Sierra Leone = a country in West Africa.
+Bildungsroman = a story about a young person growing up. It's a German word.
+vibrissae = whiskers, like on a cat.
+phenomenon = something amazing or unusual that happens and can be seen.
+alleviate = to make pain or a problem less bad.
+legation = an office of diplomats from another country, like a small embassy.
+diffidence = shyness and not feeling confident.
+butane = a gas used as fuel in lighters and camping stoves.
+cataract = a cloudy spot in the eye that makes it hard to see. Also a big waterfall.
+quiche = a pie made with eggs, cheese, and other fillings.
+euphemism = a gentler way of saying something unpleasant, like "passed away" instead of "died."
+acolyte = a helper in a church service, or a loyal follower.
+innocuous = harmless.
+Tripoli = the capital city of Libya, in North Africa.
+neurological = having to do with the brain and nerves.
+mysticetes = whales that have baleen instead of teeth, like blue whales.
+Eritrea = a country in East Africa on the Red Sea.
+forsythia = a shrub covered in bright yellow flowers in early spring.
+salicylic acid = a medicine used to treat pimples and warts.
+stomatopods = mantis shrimp: colorful sea creatures with super-strong punching claws.
+frankincense = a sweet-smelling tree sap. It was one of the gifts of the Three Wise Men.
+trichobothria = very fine hairs on spiders that sense air moving.
+Cappadocia = a region in Turkey famous for hot-air balloons and tall rock towers.
+`;
+const DEFS = {};
+for (const line of DEFS_TEXT.trim().split("\n")) {
+  const i = line.indexOf(" = ");
+  if (i > 0) DEFS[line.slice(0, i)] = line.slice(i + 3);
+}
+
 // "a_cappella" -> { id: "a cappella", spellings: ["a cappella"], level }
 const WORDS = {};
 for (const [level, text] of Object.entries(LISTS)) {
@@ -276,7 +772,7 @@ function checkAnswer(typed, entry) {
 // ---------- Saved progress (only on this device) ----------
 const STORE_KEY = "beeCoach.v1";
 let progress = {}; // id -> { right, wrong, last: "right" | "wrong" }
-let prefs = { level: "one", len: 20 };
+let prefs = { level: "one", len: 10 };
 try {
   const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
   progress = saved.progress || {};
@@ -383,17 +879,17 @@ function buildRound() {
 
 function nextWord() {
   $("feedback").hidden = true;
+  $("defBox").hidden = true;
   $("answer").value = "";
-  $("skip").textContent = "Skip";
+  $("skip").textContent = "Skip this word";
   $("check").textContent = "Check";
   if (!queue.length) return finishRound();
   current = queue.shift();
   state = "asking";
   $("playArea").style.display = "contents";
   $("doneArea").hidden = true;
-  $("hearLabel").textContent = started ? "Hear again" : "Hear first word";
   render();
-  if (started) { say(current.id); $("answer").focus(); }
+  if (started) { say(current.id); }
 }
 
 function letterTiles(correct, typed) {
@@ -424,11 +920,11 @@ function record(id, ok) {
 function onSubmit(e) {
   e.preventDefault();
   const typed = $("answer").value;
-  if (!current || !typed.trim()) { $("answer").focus(); return; }
+  if (!current || !typed.trim()) { return; }
 
   if (state === "fixing") {
     if (checkAnswer(typed, current)) { nextWord(); }
-    else { $("answer").value = ""; $("answer").focus(); }
+    else { $("answer").value = ""; }
     return;
   }
 
@@ -436,13 +932,16 @@ function onSubmit(e) {
   if (checkAnswer(typed, current)) {
     record(current.id, true);
     round.right++; round.streak++;
+    const praise = ["Correct!", "Nailed it!", "Yes!", "Perfect!", "Great spelling!"][Math.floor(Math.random() * 5)];
     fb.className = "feedback good";
-    fb.innerHTML = `<h2>${["Correct!", "Nailed it!", "Yes!", "Perfect!", "Great spelling!"][Math.floor(Math.random() * 5)]}</h2>
+    fb.innerHTML = `<h2>${praise}</h2>
       <div class="tiles">${letterTiles(current.spellings[0], "")}</div>`;
     fb.hidden = false;
+    $("defBox").hidden = true;
     state = "ready";
     render();
-    setTimeout(nextWord, 1100);
+    say(praise, 1);
+    setTimeout(nextWord, 1600);
   } else {
     record(current.id, false);
     round.wrong++; round.streak = 0; round.missed.add(current.id);
@@ -454,14 +953,14 @@ function onSubmit(e) {
     fb.innerHTML = `<h2>Not quite</h2>
       <p>You typed: <b>${escapeHtml(typed)}</b></p>
       <div class="tiles">${letterTiles(current.spellings[0], typed)}</div>${alts}
-      <p class="hint">Type it the right way to keep going. It will come back later.</p>`;
+      <p class="hint">Now spell it the right way to keep going. It will come back later.</p>`;
     fb.hidden = false;
+    $("defBox").hidden = true;
     state = "fixing";
     $("answer").value = "";
     $("check").textContent = "Next";
-    $("skip").textContent = "Skip it";
     render();
-    $("answer").focus();
+    say(`Not quite. ${current.spellings[0]} is spelled: ${spellOut(current.spellings[0])}.`, 0.8);
   }
 }
 
@@ -478,6 +977,11 @@ function finishRound() {
   d.hidden = false;
   $("again").onclick = buildRound;
   render();
+}
+
+// "cul-de-sac" -> "c, u, l, hyphen, d, e, ..." so the voice reads letters one at a time.
+function spellOut(word) {
+  return [...word.toLowerCase()].map(c => c === " " ? "space" : c === "-" ? "hyphen" : c.toUpperCase()).join(", ");
 }
 
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -513,11 +1017,52 @@ function updateCountdown() {
 $("hear").onclick = () => {
   if (!current) return;
   started = true;
-  $("hearLabel").textContent = "Hear again";
   say(current.id);
-  $("answer").focus();
 };
-$("slow").onclick = () => { if (current) { started = true; say(current.id, 0.5); $("answer").focus(); } };
+$("define").onclick = () => {
+  if (!current) return;
+  started = true;
+  const def = DEFS[current.id] || "Sorry, there's no definition for this word yet.";
+  $("defBox").innerHTML = `<b>It means:</b> ${escapeHtml(def)}`;
+  $("defBox").hidden = false;
+  say(`${current.id}. It means: ${def}`);
+};
+
+// ---------- On-screen letter keyboard (so the iPad keyboard never pops up) ----------
+function typeKey(k) {
+  if (!current || state === "ready") return;
+  const a = $("answer");
+  if (k === "back") a.value = a.value.slice(0, -1);
+  else if (a.value.length < 30) a.value += k;
+}
+(function buildKeyboard() {
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  const kb = $("kb");
+  rows.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    for (const ch of r) row.insertAdjacentHTML("beforeend", `<button type="button" class="key" data-k="${ch}">${ch}</button>`);
+    if (i === 2) row.insertAdjacentHTML("beforeend", `<button type="button" class="key wide" data-k="back" aria-label="Delete">⌫ delete</button>`);
+    kb.appendChild(row);
+  });
+  kb.insertAdjacentHTML("beforeend", `<div class="row">
+    <button type="button" class="key wide" data-k="-" aria-label="Hyphen">- dash</button>
+    <button type="button" class="key space" data-k=" " aria-label="Space">space</button>
+    <button type="submit" class="key go" id="check">Check</button></div>`);
+  kb.addEventListener("click", e => {
+    const b = e.target.closest("button[data-k]");
+    if (b) typeKey(b.dataset.k);
+  });
+})();
+// A real keyboard still works too (handy on a Mac).
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("select, summary")) return;
+  if (/^[a-z]$/i.test(e.key)) { typeKey(e.key.toLowerCase()); e.preventDefault(); }
+  else if (e.key === "Backspace") { typeKey("back"); e.preventDefault(); }
+  else if (e.key === " " || e.key === "-") { typeKey(e.key); e.preventDefault(); }
+  else if (e.key === "Enter") { $("form").requestSubmit(); e.preventDefault(); }
+});
+$("slow").onclick = () => { if (current) { started = true; say(current.id, 0.5); } };
 $("skip").onclick = () => {
   if (!current) return;
   if (state === "asking") { queue.push(current); }
