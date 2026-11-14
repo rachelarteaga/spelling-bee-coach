@@ -313,9 +313,20 @@ function voiceLabel(v) {
   const quality = /premium/i.test(id) ? " ★ best" : /enhanced/i.test(id) ? " ★ better" : "";
   return `${name} (${accent})${quality}`;
 }
+let showAllVoices = false;
 function loadVoices() {
   if (!canSpeak) return;
-  const all = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && !SKIP_VOICES.test(v.name));
+  const every = speechSynthesis.getVoices();
+  if (showAllVoices) {
+    // Unfiltered: every voice Safari reports, English first, so we can see what the device really offers.
+    voiceChoices = [...every].sort((a, b) => (/^en/i.test(b.lang) - /^en/i.test(a.lang)) || voiceScore(b) - voiceScore(a));
+    voice = voiceChoices.find(v => v.voiceURI === prefs.voice) || voice || voiceChoices[0] || null;
+    $("voice").innerHTML = voiceChoices.map((v, i) =>
+      `<option value="${i}">${escapeHtml(`${v.name} · ${v.lang}${/premium/i.test(v.voiceURI) ? " · premium" : /enhanced/i.test(v.voiceURI) ? " · enhanced" : ""}`)}</option>`).join("");
+    if (voice) $("voice").value = String(voiceChoices.indexOf(voice));
+    return;
+  }
+  const all = every.filter(v => /^en/i.test(v.lang) && !SKIP_VOICES.test(v.name));
   // Several entries can share a name; keep the best-scoring one of each.
   const best = new Map();
   for (const v of all) {
@@ -329,6 +340,7 @@ function loadVoices() {
   sel.innerHTML = voiceChoices.length
     ? voiceChoices.map((v, i) => `<option value="${i}">${escapeHtml(voiceLabel(v))}</option>`).join("")
     : `<option>Default voice</option>`;
+  sel.insertAdjacentHTML("beforeend", `<option value="all">Show all voices (${every.length})…</option>`);
   if (voice) sel.value = String(voiceChoices.indexOf(voice));
 }
 function say(text, rate = 0.85) {
@@ -517,6 +529,7 @@ $("resetNo").onclick = () => { $("resetConfirm").hidden = true; };
 $("resetYes").onclick = () => { progress = {}; save(); $("resetConfirm").hidden = true; if (prefs.level === "missed") prefs.level = "one"; buildRound(); };
 
 $("voice").onchange = e => {
+  if (e.target.value === "all") { showAllVoices = true; loadVoices(); return; }
   voice = voiceChoices[Number(e.target.value)] || voice;
   if (voice) { prefs.voice = voice.voiceURI; save(); }
   say("Let's practice for the spelling bee.");
