@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Spelling Bee Coach</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bee Coach">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one centered practice card (the "podium"), level chips above, round stats below. */
+:root {
+  --bg: #f5f6f9;
+  --surface: #ffffff;
+  --ink: #1c2233;
+  --muted: #5d6478;
+  --line: #dfe2ea;
+  --honey: #f2b100;
+  --honey-ink: #3a2a00;
+  --honey-soft: #fff4cf;
+  --good: #1f8a4c;
+  --good-soft: #e3f5ea;
+  --bad: #c2372b;
+  --bad-soft: #fde7e4;
+  --display: "Baloo 2", "Avenir Next Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151d; --surface: #1b2030; --ink: #eef0f6; --muted: #a2a9bd; --line: #2d3447;
+    --honey: #ffc629; --honey-ink: #2a1e00; --honey-soft: #3a3115;
+    --good: #4fcf85; --good-soft: #17352a; --bad: #ff7b6e; --bad-soft: #3c1f1f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151d; --surface: #1b2030; --ink: #eef0f6; --muted: #a2a9bd; --line: #2d3447;
+  --honey: #ffc629; --honey-ink: #2a1e00; --honey-soft: #3a3115;
+  --good: #4fcf85; --good-soft: #17352a; --bad: #ff7b6e; --bad-soft: #3c1f1f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 18px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 20px 40px; display: grid; gap: 18px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 2rem; line-height: 1; margin: 0; letter-spacing: -0.01em; }
+h1 .dot { color: var(--honey); }
+.countdown { font-weight: 700; color: var(--honey-ink); background: var(--honey); padding: 6px 14px; border-radius: 999px; font-size: 0.95rem; }
+
+.levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.level {
+  font: inherit; color: var(--ink); background: var(--surface); border: 2px solid var(--line);
+  border-radius: 14px; padding: 10px 8px; cursor: pointer; text-align: center; display: grid; gap: 2px;
+}
+.level b { font-family: var(--display); font-size: 1.15rem; line-height: 1.1; }
+.level small { color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.level[aria-pressed="true"] { border-color: var(--honey); background: var(--honey-soft); }
+.level:disabled { opacity: 0.45; cursor: default; }
+.level:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
+
+.lenrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 0.95rem; }
+.len { font: inherit; background: none; border: 2px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+.len[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+
+.podium {
+  background: var(--surface); border: 2px solid var(--line); border-radius: 22px;
+  padding: 24px clamp(16px, 4vw, 32px); display: grid; gap: 18px; justify-items: center; text-align: center;
+}
+.progress { width: 100%; display: flex; justify-content: space-between; color: var(--muted); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.bar { width: 100%; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--honey); transition: width .3s ease; }
+
+.speak-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.hear {
+  font-family: var(--display); font-weight: 800; font-size: 1.5rem; color: var(--honey-ink);
+  background: var(--honey); border: 0; border-radius: 18px; padding: 14px 28px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 0 color-mix(in srgb, var(--honey) 60%, #000);
+}
+.hear:active { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--honey) 60%, #000); }
+.hear svg { width: 28px; height: 28px; }
+.slow {
+  font: inherit; font-weight: 700; color: var(--ink); background: var(--surface); border: 2px solid var(--line);
+  border-radius: 18px; padding: 14px 20px; cursor: pointer;
+}
+
+form { width: 100%; display: grid; gap: 12px; }
+#answer {
+  width: 100%; font-family: var(--body); font-size: clamp(1.6rem, 6vw, 2.4rem); font-weight: 700;
+  text-align: center; letter-spacing: 0.06em; color: var(--ink); background: var(--bg);
+  border: 3px solid var(--line); border-radius: 16px; padding: 14px 12px;
+}
+#answer:focus { border-color: var(--honey); outline: none; }
+.actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  font: inherit; font-weight: 700; font-size: 1.1rem; border-radius: 14px; padding: 12px 26px; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--ink); color: var(--bg);
+}
+.btn.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+
+.feedback { width: 100%; border-radius: 16px; padding: 14px; display: grid; gap: 8px; }
+.feedback.good { background: var(--good-soft); color: var(--good); }
+.feedback.bad { background: var(--bad-soft); color: var(--bad); }
+.feedback h2 { font-family: var(--display); margin: 0; font-size: 1.5rem; line-height: 1.1; }
+.feedback p { margin: 0; color: var(--ink); }
+.tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.tiles span {
+  font-family: var(--body); font-weight: 700; font-size: 1.5rem; min-width: 1.6em; padding: 2px 4px;
+  border-radius: 8px; background: var(--surface); color: var(--ink); border: 2px solid var(--line);
+}
+.tiles span.miss { border-color: var(--bad); color: var(--bad); }
+.tiles span.gap { border-color: transparent; background: transparent; }
+.hint { font-size: 0.95rem; color: var(--muted); }
+
+.done { display: grid; gap: 10px; justify-items: center; }
+.done h2 { font-family: var(--display); font-size: 2rem; margin: 0; }
+.done ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.done li { background: var(--bad-soft); color: var(--bad); padding: 4px 10px; border-radius: 99px; font-weight: 700; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--surface); border: 2px solid var(--line); border-radius: 14px; padding: 10px; text-align: center; }
+.stat b { display: block; font-family: var(--display); font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.warn { background: var(--bad-soft); color: var(--bad); border-radius: 12px; padding: 10px 14px; font-size: 0.95rem; }
+footer { text-align: center; color: var(--muted); font-size: 0.85rem; }
+footer button { font: inherit; background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 520px) {
+  .levels { grid-template-columns: repeat(2, 1fr); }
+  h1 { font-size: 1.6rem; }
+}
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Spelling Bee Coach<span class="dot">.</span></h1>
+    <div class="countdown" id="countdown">Bee day: Nov 19</div>
+  </header>
+
+  <div id="speechWarn" class="warn" hidden>This browser can't speak words out loud. Open this page in Safari on the iPad.</div>
+
+  <nav class="levels" aria-label="Word list">
+    <button class="level" data-level="one" id="lvl-one"><b>One Bee</b><small></small></button>
+    <button class="level" data-level="two" id="lvl-two"><b>Two Bee</b><small></small></button>
+    <button class="level" data-level="three" id="lvl-three"><b>Three Bee</b><small></small></button>
+    <button class="level" data-level="missed" id="lvl-missed"><b>Missed</b><small></small></button>
+  </nav>
+
+  <div class="lenrow">
+    Words per round:
+    <button class="len" data-len="10" id="len-10">10</button>
+    <button class="len" data-len="20" id="len-20">20</button>
+    <button class="len" data-len="0" id="len-all">All</button>
+  </div>
+
+  <section class="podium" aria-live="polite">
+    <div class="progress"><span id="levelName">One Bee</span><span id="count">Word 1 of 20</span></div>
+    <div class="bar"><i id="bar"></i></div>
+
+    <div id="playArea" style="display:contents">
+      <div class="speak-row">
+        <button class="hear" id="hear" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          <span id="hearLabel">Hear word</span>
+        </button>
+        <button class="slow" id="slow" type="button">Say it slowly</button>
+      </div>
+
+      <form id="form" autocomplete="off">
+        <input id="answer" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="type the word" aria-label="Type the spelling">
+        <div class="actions">
+          <button class="btn" id="check" type="submit">Check</button>
+          <button class="btn ghost" id="skip" type="button">Skip</button>
+        </div>
+      </form>
+
+      <div id="feedback" class="feedback" hidden></div>
+    </div>
+
+    <div id="doneArea" class="done" hidden></div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><b id="sRight">0</b><span>Right</span></div>
+    <div class="stat"><b id="sWrong">0</b><span>To practice</span></div>
+    <div class="stat"><b id="sStreak">0</b><span>Streak</span></div>
+  </section>
+
+  <footer>Words from the 2026–2027 School Spelling Bee Study List. <button id="reset" type="button">Reset progress</button><span id="resetConfirm" hidden> Sure? <button id="resetYes" type="button">Yes, erase</button> <button id="resetNo" type="button">Cancel</button></span></footer>
+</div>
+
+<script>
+// ---------- Word lists (a "|" separates accepted spellings; the first one is spoken) ----------
+const LISTS = {
+  one: `ran rod shy drink mist still pump sharp rich shoot claws winter yellow mouth paper inside whale lizard nurse
+wind good bunny silly stars hello shell easy shift seal crack apple shine spray rabbit frozen market beware wrong
+leg most down sick truck bush yarn body heart even come sound chips year feed speak flock sparkle hopped
+dirt hurt steps path fire late wings house tusk dive fine mossy beans truth tallest cliffs crunch sweater money
+cabin carve earth half fear riddle illness knit total finish spiders hospital narrow foolish charming beasts smoothly dangle frazzled
+darkness shadows friend swift thirsty voice lead cloak indoors holiday entire mustard medium afraid source shivering cottage distance bamboo
+always morning lovely grandfather peer peach groan parade trouble safety library company pennies remember pearls barge humble breeze
+sprout alive return footprints gentle pancakes sloth whistle relax stout guide ginger hiking result tangy grumpily seventy soared`,
+  two: `buttons clever invite carefully permit lunar woven granola laughter lounge duration examine tissues compromise bifocals geologist atmosphere helium annoyance
+cuddle basement butterflies sniffling awning boycotting proclaim warrior salary jovial dictionary versus marlin incident cutlery bellowed disappointment suggested interruption
+puffy burlap kelp beneath fickle molten thimble rigid disappear inferior business lullaby Halloween Japanese chisel organism truant chimpanzees concentrate
+tiptoed wetlands property tractor relief elite custody fierce hurdler December reinstate opposite compliment investment fundraiser quail pamphlet desperate piñata
+territory monorail alphabetical prejudice cartridge fertilizer|fertiliser sorceress singularity battalion perimeter meticulous megahertz insurrection fascism reservoir carrion elliptical cemetery
+stragglers exploratory integrity solidarity segregation apprentice glamorous fictitious collateral precedent haddock cosmodrome regolith pheasants duende matrilineal glaucoma staccato dachshund
+albino indigo Oregon calico tortillas synthetic salamanders convertible initiation materialize|materialise hypothermia arthritis pentathletes predecessor conscious piteously iridium rendezvous
+ridiculous bratwurst rebuttal sputnik civilian Caesar suspension snarkiness mascara magnesium optometrist schnauzer persnickety Senegal Polaroid arnica adrenaline romerillo Aeolus`,
+  three: `newt generosity wallowing mewling panoramic gauntlets appetizing prospective preconception hemisphere reluctance propeller settee finesse curriculum enigmatic hypothesis
+thrummed burnished imperial generator Doberman inanimate sentinels subscription procession seminal consulate modish unconscious foliage quizzically increments reassurance
+censers embankment mortar persistent dominion lemmings frequency blithely tenuous saxophone canter cuisine influenza odorant|odourant crocheted apologetic
+lapels unrelenting arsonists authority decisively auditory self-sufficient conspicuous perpendicular torrential sauntered juniper palazzo irrelevant diplomatically calibrate credenza
+comprehensible trenchant despondent echolocation conflagration thermotaxis inaugurate bioluminescence chickadee asymmetric sharpei endothermy éclair irascibility a_cappella Amharic Gloucester prosciutto chitinous Krio Addis_Ababa
+protectorate pulmonary approximation glycerin|glycerine alabaster arugula vibrometer mayonnaise sputum cerulean cul-de-sac electrolytes ototoxic Aphrodite bogong_moth yakuza sensilla eponymous Presbyterian lactobacillus spes_phthisica
+Delaware undulating phantasmal brazier|brasier arachnid pathologically affinities embodiment porpoises psychological assemblage leprosy eureka annelids kerosene|kerosine Pennsylvania ampulla solenodon Sierra_Leone Bildungsroman vibrissae
+phenomenon alleviate legation diffidence butane cataract quiche euphemism acolyte innocuous Tripoli neurological mysticetes Eritrea forsythia salicylic_acid stomatopods frankincense trichobothria Cappadocia`
+};
+const LEVEL_NAMES = { one: "One Bee", two: "Two Bee", three: "Three Bee", missed: "Missed words" };
+
+// "a_cappella" -> { id: "a cappella", spellings: ["a cappella"], level }
+const WORDS = {};
+for (const [level, text] of Object.entries(LISTS)) {
+  WORDS[level] = text.split(/\s+/).filter(Boolean).map(tok => {
+    const spellings = tok.split("|").map(s => s.replace(/_/g, " "));
+    return { id: spellings[0], spellings, level };
+  });
+}
+const ALL = [...WORDS.one, ...WORDS.two, ...WORDS.three];
+const BY_ID = Object.fromEntries(ALL.map(w => [w.id, w]));
+
+// ---------- Answer checking ----------
+function normalize(s) {
+  return s
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // é -> e, ñ -> n
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function checkAnswer(typed, entry) {
+  // TODO(human): Decide how strict "correct" should be.
+  // Right now: capital letters and accent marks don't matter (piñata = pinata, Oregon = oregon),
+  // but hyphens and spaces DO matter (cul-de-sac must have its hyphens).
+  return entry.spellings.some(s => normalize(s) === normalize(typed));
+}
+
+// ---------- Saved progress (only on this device) ----------
+const STORE_KEY = "beeCoach.v1";
+let progress = {}; // id -> { right, wrong, last: "right" | "wrong" }
+let prefs = { level: "one", len: 20 };
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+  progress = saved.progress || {};
+  prefs = { ...prefs, ...(saved.prefs || {}) };
+} catch (e) {}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ progress, prefs })); } catch (e) {}
+}
+const missedWords = () => ALL.filter(w => progress[w.id]?.last === "wrong");
+const learnedCount = list => list.filter(w => progress[w.id]?.last === "right").length;
+
+// ---------- Speech ----------
+const canSpeak = "speechSynthesis" in window;
+let voice = null;
+function pickVoice() {
+  if (!canSpeak) return;
+  const vs = speechSynthesis.getVoices();
+  const us = vs.filter(v => /^en[-_]US/i.test(v.lang));
+  voice = us.find(v => /premium|enhanced/i.test(v.name))
+       || us.find(v => /Samantha|Ava|Allison|Nicky/i.test(v.name))
+       || us[0] || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, rate = 0.85) {
+  if (!canSpeak) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) u.voice = voice;
+  u.lang = "en-US";
+  u.rate = rate;
+  speechSynthesis.speak(u);
+}
+
+// ---------- Round state ----------
+let queue = [];       // words still to ask this round
+let total = 0;        // words in the round (for the progress bar)
+let current = null;
+let state = "ready";  // ready | asking | fixing (retyping a missed word)
+let started = false;  // first word waits for a tap so iPad lets us speak
+let round = { right: 0, wrong: 0, streak: 0, missed: new Set() };
+
+const $ = id => document.getElementById(id);
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function buildRound() {
+  const pool = prefs.level === "missed" ? missedWords() : WORDS[prefs.level];
+  // Words he hasn't gotten right yet come first, then the rest.
+  const notYet = shuffle(pool.filter(w => progress[w.id]?.last !== "right"));
+  const known = shuffle(pool.filter(w => progress[w.id]?.last === "right"));
+  let words = [...notYet, ...known];
+  if (prefs.len > 0) words = words.slice(0, prefs.len);
+  queue = words;
+  total = words.length;
+  round = { right: 0, wrong: 0, streak: 0, missed: new Set() };
+  started = false;
+  nextWord();
+}
+
+function nextWord() {
+  $("feedback").hidden = true;
+  $("answer").value = "";
+  $("skip").textContent = "Skip";
+  $("check").textContent = "Check";
+  if (!queue.length) return finishRound();
+  current = queue.shift();
+  state = "asking";
+  $("playArea").style.display = "contents";
+  $("doneArea").hidden = true;
+  $("hearLabel").textContent = started ? "Hear again" : "Hear first word";
+  render();
+  if (started) { say(current.id); $("answer").focus(); }
+}
+
+function letterTiles(correct, typed) {
+  // Mark letters of the correct spelling that he missed, using the longest common subsequence.
+  const a = correct.toLowerCase(), b = (typed || "").toLowerCase();
+  const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--)
+    for (let j = b.length - 1; j >= 0; j--)
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const keep = new Set();
+  for (let i = 0, j = 0; i < a.length && j < b.length;) {
+    if (a[i] === b[j]) { keep.add(i); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) i++; else j++;
+  }
+  return [...correct].map((ch, i) =>
+    ch === " " ? `<span class="gap"> </span>` : `<span class="${keep.has(i) || !typed ? "" : "miss"}">${ch}</span>`
+  ).join("");
+}
+
+function record(id, ok) {
+  const p = progress[id] || { right: 0, wrong: 0 };
+  ok ? p.right++ : p.wrong++;
+  p.last = ok ? "right" : "wrong";
+  progress[id] = p;
+  save();
+}
+
+function onSubmit(e) {
+  e.preventDefault();
+  const typed = $("answer").value;
+  if (!current || !typed.trim()) { $("answer").focus(); return; }
+
+  if (state === "fixing") {
+    if (checkAnswer(typed, current)) { nextWord(); }
+    else { $("answer").value = ""; $("answer").focus(); }
+    return;
+  }
+
+  const fb = $("feedback");
+  if (checkAnswer(typed, current)) {
+    record(current.id, true);
+    round.right++; round.streak++;
+    fb.className = "feedback good";
+    fb.innerHTML = `<h2>${["Correct!", "Nailed it!", "Yes!", "Perfect!", "Great spelling!"][Math.floor(Math.random() * 5)]}</h2>
+      <div class="tiles">${letterTiles(current.spellings[0], "")}</div>`;
+    fb.hidden = false;
+    state = "ready";
+    render();
+    setTimeout(nextWord, 1100);
+  } else {
+    record(current.id, false);
+    round.wrong++; round.streak = 0; round.missed.add(current.id);
+    // Ask it again a few words later this round.
+    queue.splice(Math.min(3, queue.length), 0, current);
+    total++;
+    const alts = current.spellings.length > 1 ? `<p class="hint">Also OK: ${current.spellings.slice(1).join(", ")}</p>` : "";
+    fb.className = "feedback bad";
+    fb.innerHTML = `<h2>Not quite</h2>
+      <p>You typed: <b>${escapeHtml(typed)}</b></p>
+      <div class="tiles">${letterTiles(current.spellings[0], typed)}</div>${alts}
+      <p class="hint">Type it the right way to keep going. It will come back later.</p>`;
+    fb.hidden = false;
+    state = "fixing";
+    $("answer").value = "";
+    $("check").textContent = "Next";
+    $("skip").textContent = "Skip it";
+    render();
+    $("answer").focus();
+  }
+}
+
+function finishRound() {
+  state = "done";
+  current = null;
+  $("playArea").style.display = "none";
+  const missed = [...round.missed];
+  const d = $("doneArea");
+  d.innerHTML = `<h2>Round done!</h2>
+    <p>${round.right} right on the first try${missed.length ? ", and these need more practice:" : ". No misses!"}</p>
+    ${missed.length ? `<ul>${missed.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>` : ""}
+    <div class="actions"><button class="btn" id="again" type="button">Start a new round</button></div>`;
+  d.hidden = false;
+  $("again").onclick = buildRound;
+  render();
+}
+
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function render() {
+  for (const lvl of ["one", "two", "three"]) {
+    $("lvl-" + lvl).querySelector("small").textContent = `${learnedCount(WORDS[lvl])} / ${WORDS[lvl].length} learned`;
+  }
+  const missedN = missedWords().length;
+  $("lvl-missed").querySelector("small").textContent = `${missedN} word${missedN === 1 ? "" : "s"}`;
+  $("lvl-missed").disabled = missedN === 0 && prefs.level !== "missed";
+  document.querySelectorAll(".level").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.level === prefs.level)));
+  document.querySelectorAll(".len").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.len) === prefs.len)));
+
+  const done = total - queue.length - (state === "done" ? 0 : 1);
+  $("levelName").textContent = LEVEL_NAMES[prefs.level];
+  $("count").textContent = state === "done" ? `${total} of ${total}` : `Word ${Math.max(1, done + 1)} of ${total}`;
+  $("bar").style.width = total ? `${(Math.max(0, state === "done" ? total : done) / total) * 100}%` : "0";
+  $("sRight").textContent = round.right;
+  $("sWrong").textContent = round.wrong;
+  $("sStreak").textContent = round.streak;
+}
+
+function updateCountdown() {
+  const bee = new Date(2026, 10, 19); // Nov 19, 2026
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((bee - today) / 86400000);
+  $("countdown").textContent =
+    days > 1 ? `${days} days until the bee` : days === 1 ? "Bee is tomorrow!" : days === 0 ? "Bee day! You've got this" : "Bee day: Nov 19";
+}
+
+// ---------- Wire up ----------
+$("hear").onclick = () => {
+  if (!current) return;
+  started = true;
+  $("hearLabel").textContent = "Hear again";
+  say(current.id);
+  $("answer").focus();
+};
+$("slow").onclick = () => { if (current) { started = true; say(current.id, 0.5); $("answer").focus(); } };
+$("skip").onclick = () => {
+  if (!current) return;
+  if (state === "asking") { queue.push(current); }
+  nextWord();
+};
+$("form").addEventListener("submit", onSubmit);
+document.querySelectorAll(".level").forEach(b => b.onclick = () => { prefs.level = b.dataset.level; save(); buildRound(); });
+document.querySelectorAll(".len").forEach(b => b.onclick = () => { prefs.len = Number(b.dataset.len); save(); buildRound(); });
+$("reset").onclick = () => { $("resetConfirm").hidden = false; };
+$("resetNo").onclick = () => { $("resetConfirm").hidden = true; };
+$("resetYes").onclick = () => { progress = {}; save(); $("resetConfirm").hidden = true; if (prefs.level === "missed") prefs.level = "one"; buildRound(); };
+
+if (!canSpeak) $("speechWarn").hidden = false;
+if (prefs.level === "missed" && !missedWords().length) prefs.level = "one";
+updateCountdown();
+buildRound();
+</script>
+</body>
+</html>
