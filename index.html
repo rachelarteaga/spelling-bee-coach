@@ -76,6 +76,11 @@ h1 .dot { color: var(--honey); }
 .lenrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 0.95rem; }
 .len { font: inherit; background: none; border: 2px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 .len[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+#voice {
+  font: inherit; color: var(--ink); background: var(--surface); border: 2px solid var(--line);
+  border-radius: 999px; padding: 4px 12px; max-width: 100%; min-width: 0;
+}
+.lenrow .sep { flex-basis: 100%; height: 0; }
 
 .podium {
   background: var(--surface); border: 2px solid var(--line); border-radius: 22px;
@@ -169,6 +174,10 @@ footer button { font: inherit; background: none; border: 0; color: var(--muted);
     <button class="len" data-len="10" id="len-10">10</button>
     <button class="len" data-len="20" id="len-20">20</button>
     <button class="len" data-len="0" id="len-all">All</button>
+    <span class="sep"></span>
+    <label for="voice">Voice:</label>
+    <select id="voice"><option>Loading voices…</option></select>
+    <button class="len" id="tryVoice" type="button">Try it</button>
   </div>
 
   <section class="podium" aria-live="polite">
@@ -282,15 +291,46 @@ const learnedCount = list => list.filter(w => progress[w.id]?.last === "right").
 // ---------- Speech ----------
 const canSpeak = "speechSynthesis" in window;
 let voice = null;
-function pickVoice() {
-  if (!canSpeak) return;
-  const vs = speechSynthesis.getVoices();
-  const us = vs.filter(v => /^en[-_]US/i.test(v.lang));
-  voice = us.find(v => /premium|enhanced/i.test(v.name))
-       || us.find(v => /Samantha|Ava|Allison|Nicky/i.test(v.name))
-       || us[0] || vs.find(v => /^en/i.test(v.lang)) || null;
+let voiceChoices = [];
+// Novelty and old robotic voices that ship with Apple devices; never offer these.
+const SKIP_VOICES = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Kathy|Ralph|Rocko|Grandma|Grandpa|Eddy|Flo|Reed|Sandy|Shelley/i;
+const NICE_NAMES = /Ava|Zoe|Evan|Nathan|Joelle|Noelle|Samantha|Allison|Susan|Tom|Siri|Google US English|Aria|Jenny|Guy|Natural/i;
+function voiceScore(v) {
+  const id = `${v.name} ${v.voiceURI}`;
+  let s = 0;
+  if (/premium/i.test(id)) s += 100;
+  else if (/enhanced/i.test(id)) s += 60;
+  if (/Natural|Online/i.test(id)) s += 50;          // Edge / Windows neural voices
+  if (NICE_NAMES.test(v.name)) s += 20;
+  if (/^en[-_]US/i.test(v.lang)) s += 10;
+  if (v.localService) s += 1;
+  return s;
 }
-if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function voiceLabel(v) {
+  const id = `${v.name} ${v.voiceURI}`;
+  const name = v.name.replace(/\s*\((Premium|Enhanced)\)/i, "").replace(/^Microsoft\s+/, "").replace(/\s+Online.*$/, "");
+  const accent = { "en-US": "US", "en-GB": "UK", "en-AU": "Australia", "en-IE": "Ireland", "en-ZA": "South Africa", "en-IN": "India", "en-CA": "Canada" }[v.lang.replace("_", "-")] || v.lang;
+  const quality = /premium/i.test(id) ? " ★ best" : /enhanced/i.test(id) ? " ★ better" : "";
+  return `${name} (${accent})${quality}`;
+}
+function loadVoices() {
+  if (!canSpeak) return;
+  const all = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && !SKIP_VOICES.test(v.name));
+  // Several entries can share a name; keep the best-scoring one of each.
+  const best = new Map();
+  for (const v of all) {
+    const key = voiceLabel(v);
+    if (!best.has(key) || voiceScore(v) > voiceScore(best.get(key))) best.set(key, v);
+  }
+  voiceChoices = [...best.values()].sort((a, b) => voiceScore(b) - voiceScore(a)).slice(0, 5);
+  const saved = voiceChoices.find(v => v.voiceURI === prefs.voice);
+  voice = saved || voiceChoices[0] || null;
+  const sel = $("voice");
+  sel.innerHTML = voiceChoices.length
+    ? voiceChoices.map((v, i) => `<option value="${i}">${escapeHtml(voiceLabel(v))}</option>`).join("")
+    : `<option>Default voice</option>`;
+  if (voice) sel.value = String(voiceChoices.indexOf(voice));
+}
 function say(text, rate = 0.85) {
   if (!canSpeak) return;
   speechSynthesis.cancel();
@@ -476,6 +516,14 @@ $("reset").onclick = () => { $("resetConfirm").hidden = false; };
 $("resetNo").onclick = () => { $("resetConfirm").hidden = true; };
 $("resetYes").onclick = () => { progress = {}; save(); $("resetConfirm").hidden = true; if (prefs.level === "missed") prefs.level = "one"; buildRound(); };
 
+$("voice").onchange = e => {
+  voice = voiceChoices[Number(e.target.value)] || voice;
+  if (voice) { prefs.voice = voice.voiceURI; save(); }
+  say("Let's practice for the spelling bee.");
+};
+$("tryVoice").onclick = () => say("Let's practice for the spelling bee.");
+
+if (canSpeak) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 if (!canSpeak) $("speechWarn").hidden = false;
 if (prefs.level === "missed" && !missedWords().length) prefs.level = "one";
 updateCountdown();
